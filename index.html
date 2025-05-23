@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApsToDo</title>
+    <link rel="icon" href="image/gb.png" type="image/x-icon" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>ApsToDo</h1>
+
+      <!-- Profile dan Time Component -->
+      <div class="user-info-container">
+        <div class="profile-info">
+          <h2 id="user-name">Ahmad Ihtisyamuddin</h2>
+          <p id="user-position">Developer</p>
+        </div>
+        <div class="time-info">
+          <div id="current-date">Loading date...</div>
+          <div id="current-time">Loading time...</div>
+        </div>
+      </div>
+
+      <div class="todo-input">
+        <input type="text" id="task-input" placeholder="Masukkan task..." />
+
+        <!-- Priority Level Selector -->
+        <select id="priority-select">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+
+        <button id="add-task">Tambah</button>
+      </div>
+      <h3>Daftar Task</h3>
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">Semua</button>
+        <button class="filter-btn" data-filter="active">
+          Belum Dikerjakan
+        </button>
+        <button class="filter-btn" data-filter="completed">Selesai</button>
+      </div>
+      <ul id="task-list"></ul>
+      <div class="todo-footer">
+        <span id="tasks-counter">0 tasks left</span>
+        <button id="clear-completed">Clear Completed</button>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
