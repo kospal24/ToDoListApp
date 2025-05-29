@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Update tasks counter
     const activeTasks = tasks.filter((task) => !task.completed).length;
-    tasksCounter.textContent = `${activeTasks} tasks left`;
+    tasksCounter.textContent = `${activeTasks} tasks tersisa`;
   }
   // Add new task
   function addTask() {
