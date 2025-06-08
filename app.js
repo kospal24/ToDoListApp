@@ -12,8 +12,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const userName = document.getElementById("user-name");
   const userPosition = document.getElementById("user-position");
 
-  // Tasks array
-  let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+  // User identifier (for demo, static username)
+  const currentUser = "default_user";
+
+  let tasks = [];
   let currentFilter = "all";
 
   // Update date and time
@@ -36,13 +38,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Update time every second
+  // Update time every minute
   updateDateTime();
-  setInterval(updateDateTime, 60000); // Update every minute
+  setInterval(updateDateTime, 60000);
 
-  // Save tasks to localStorage
-  function saveTasks() {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
+  // Fetch tasks from backend API
+  async function fetchTasks() {
+    try {
+      const response = await fetch(`api/tasks.php?user=${currentUser}`);
+      if (!response.ok) throw new Error("Failed to fetch tasks");
+      tasks = await response.json();
+      renderTasks();
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   // Render tasks based on current filter
@@ -59,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     taskList.innerHTML = "";
 
-    filteredTasks.forEach((task, index) => {
+    filteredTasks.forEach((task) => {
       const li = document.createElement("li");
       li.className = "task-item";
 
@@ -72,15 +81,31 @@ document.addEventListener("DOMContentLoaded", () => {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.className = "task-checkbox";
-      checkbox.checked = task.completed;
-      checkbox.addEventListener("change", () => toggleTaskStatus(index));
+      checkbox.checked = task.completed == 1;
+      checkbox.addEventListener("change", () =>
+        toggleTaskStatus(task.id, checkbox.checked)
+      );
       li.appendChild(checkbox);
 
       // Task text
       const taskText = document.createElement("span");
       taskText.textContent = task.text;
-      taskText.className = task.completed ? "task-text completed" : "task-text";
+      taskText.className =
+        task.completed == 1 ? "task-text completed" : "task-text";
       li.appendChild(taskText);
+
+      // Due date display
+      if (task.due_date) {
+        const dueDateSpan = document.createElement("span");
+        const options = { year: "numeric", month: "long", day: "numeric" };
+        const dateObj = new Date(task.due_date + "T00:00:00");
+        dueDateSpan.textContent = dateObj.toLocaleDateString("id-ID", options);
+        dueDateSpan.className = "task-due-date";
+        dueDateSpan.style.marginRight = "10px";
+        dueDateSpan.style.fontSize = "0.8rem";
+        dueDateSpan.style.color = "#666";
+        li.appendChild(dueDateSpan);
+      }
 
       // Priority badge
       const priorityBadge = document.createElement("span");
@@ -93,55 +118,85 @@ document.addEventListener("DOMContentLoaded", () => {
       const deleteBtn = document.createElement("button");
       deleteBtn.textContent = "Hapus";
       deleteBtn.className = "delete-btn";
-      deleteBtn.addEventListener("click", () => deleteTask(index));
+      deleteBtn.addEventListener("click", () => deleteTask(task.id));
       li.appendChild(deleteBtn);
 
       taskList.appendChild(li);
     });
 
     // Update tasks counter
-    const activeTasks = tasks.filter((task) => !task.completed).length;
+    const activeTasks = tasks.filter((task) => task.completed == 0).length;
     tasksCounter.textContent = `${activeTasks} tasks tersisa`;
   }
+
   // Add new task
-  function addTask() {
+  async function addTask() {
     const taskText = taskInput.value.trim();
     const priority = prioritySelect.value;
+    const taskDateInput = document.getElementById("task-date");
+    const dueDate = taskDateInput.value; // format: yyyy-mm-dd
 
-    if (taskText) {
-      tasks.push({
-        text: taskText,
-        completed: false,
+    if (!taskText) return;
 
-        priority: priority,
-        createdAt: new Date().toISOString(),
+    const newTask = {
+      user: currentUser,
+      text: taskText,
+      completed: 0,
+      priority: priority,
+      due_date: dueDate || null,
+    };
+
+    try {
+      const response = await fetch("api/tasks.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTask),
       });
-
+      if (!response.ok) throw new Error("Failed to add task");
       taskInput.value = "";
-      saveTasks();
-      renderTasks();
+      taskDateInput.value = "";
+      await fetchTasks();
+    } catch (error) {
+      console.error(error);
     }
   }
 
   // Toggle task status (completed/active)
-  function toggleTaskStatus(index) {
-    tasks[index].completed = !tasks[index].completed;
-    saveTasks();
-    renderTasks();
+  async function toggleTaskStatus(id, completed) {
+    try {
+      const response = await fetch("api/tasks.php", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, completed: completed ? 1 : 0 }),
+      });
+      if (!response.ok) throw new Error("Failed to update task");
+      await fetchTasks();
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   // Delete task
-  function deleteTask(index) {
-    tasks.splice(index, 1);
-    saveTasks();
-    renderTasks();
+  async function deleteTask(id) {
+    try {
+      const response = await fetch("api/tasks.php", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `id=${id}`,
+      });
+      if (!response.ok) throw new Error("Failed to delete task");
+      await fetchTasks();
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   // Clear completed tasks
-  function clearCompleted() {
-    tasks = tasks.filter((task) => !task.completed);
-    saveTasks();
-    renderTasks();
+  async function clearCompleted() {
+    const completedTasks = tasks.filter((task) => task.completed == 1);
+    for (const task of completedTasks) {
+      await deleteTask(task.id);
+    }
   }
 
   // Event Listeners
@@ -167,5 +222,5 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Initialize
-  renderTasks();
+  fetchTasks();
 });
